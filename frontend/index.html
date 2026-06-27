@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multimodal RAG: Intelligent Chart & Document Analyzer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="dark-theme">
+    <div class="app-container">
+        <!-- Top Navbar -->
+        <header class="app-header">
+            <div class="header-logo">
+                <div class="logo-icon"></div>
+                <h1>Multimodal RAG <span>Analyzer</span></h1>
+            </div>
+            
+            <div class="header-actions">
+                <button id="theme-toggle-btn" class="icon-btn" title="Toggle Theme">
+                    <span class="theme-icon">☀️</span>
+                    <span class="theme-text">Light Mode</span>
+                </button>
+                <div class="api-key-container">
+                    <button id="api-key-toggle-btn" class="icon-btn" title="Configure API Key">
+                        <span class="key-status-dot unconfigured"></span>
+                        <span class="btn-text">API Setup</span>
+                    </button>
+                    <div id="api-key-modal" class="api-key-modal hidden">
+                        <h3>Configure Gemini API Key</h3>
+                        <p>Provide a Google Gemini API Key to enable visual chart processing and RAG answering. Otherwise, the app operates in offline/mock demo mode.</p>
+                        <div class="input-group">
+                            <input type="password" id="api-key-input" placeholder="AIzaSy..." autocomplete="off">
+                            <button id="api-key-save-btn" class="primary-btn">Save Key</button>
+                        </div>
+                        <a href="https://aistudio.google.com/" target="_blank" class="helper-link">Get a free Gemini API Key from Google AI Studio &rarr;</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Body -->
+        <div class="app-workspace">
+            <!-- Sidebar: Document Management -->
+            <aside class="app-sidebar">
+                <div class="sidebar-section">
+                    <h2>Documents</h2>
+                    <div class="upload-zone" id="drop-zone">
+                        <input type="file" id="file-input" accept=".pdf" class="hidden">
+                        <div class="upload-icon"></div>
+                        <p class="upload-title">Upload Financial Report / PDF</p>
+                        <p class="upload-subtitle">Drag & drop or click to browse</p>
+                        <div id="upload-progress" class="upload-progress-bar hidden">
+                            <div class="progress-fill"></div>
+                            <span class="progress-text">Processing PDF...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sidebar-section list-section">
+                    <h3>Your Documents</h3>
+                    <div class="doc-filter">
+                        <button id="filter-all-btn" class="filter-btn active" data-id="">All Documents</button>
+                    </div>
+                    <div id="documents-list" class="documents-list">
+                        <!-- Loaded documents list dynamically -->
+                        <div class="empty-state">No documents uploaded yet.</div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Panel: Split Chat and Document Inspector -->
+            <main class="app-main">
+                <!-- Chat Panel -->
+                <section class="panel chat-panel">
+                    <div class="panel-header">
+                        <h2>Interactive Chat</h2>
+                        <span class="active-doc-badge" id="active-doc-indicator">All Files Selected</span>
+                    </div>
+
+                    <div class="messages-container" id="chat-messages">
+                        <div class="message system-message">
+                            <div class="message-content">
+                                <h3>Welcome to Multimodal RAG Document Analyzer!</h3>
+                                <p>This application parses documents segmentally and uses Gemini Vision models to convert diagrams, charts, and tables into descriptive text for retrieval.</p>
+                                <p>To start, upload a PDF containing charts/text (e.g., quarterly financial statements or scientific papers) and ask questions like:</p>
+                                <ul class="suggested-queries">
+                                    <li>"What are the quarterly revenues shown in the bar chart?"</li>
+                                    <li>"Explain the trend illustrated in the page 3 chart."</li>
+                                    <li>"Summarize the structured table showing expenses."</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chat-input-area">
+                        <div id="dynamic-suggestions" class="dynamic-suggestions hidden"></div>
+                        <form id="chat-form" class="chat-form">
+                            <input type="text" id="chat-input" placeholder="Ask a question about the uploaded document(s)..." required autocomplete="off">
+                            <button type="submit" id="chat-submit-btn" class="send-btn" title="Send Question"></button>
+                        </form>
+                    </div>
+                </section>
+
+                <!-- Inspector Panel: Shows Visuals and Sources -->
+                <section class="panel inspector-panel">
+                    <div class="panel-header">
+                        <h2>Source Inspector</h2>
+                        <div class="tab-buttons">
+                            <button class="tab-btn active" data-tab="retrieved-sources">Retrieved Context</button>
+                            <button class="tab-btn" data-tab="visual-viewer">Visual Map</button>
+                            <button class="tab-btn" data-tab="page-browser" id="tab-page-browser-btn">Page Browser</button>
+                        </div>
+                    </div>
+
+                    <div class="panel-body">
+                        <!-- Tab 1: Retrieved Chunks -->
+                        <div id="retrieved-sources" class="tab-content active">
+                            <div class="empty-inspector-state">
+                                <div class="inspector-icon source-icon"></div>
+                                <p>Ask a question to see the context segments retrieved from the vector database.</p>
+                            </div>
+                            <div class="sources-list hidden" id="sources-list-container">
+                                <!-- Chunks inserted dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- Tab 2: Visual Document Viewer / Chart crop -->
+                        <div id="visual-viewer" class="tab-content">
+                            <div class="empty-inspector-state">
+                                <div class="inspector-icon chart-icon"></div>
+                                <p>Click "Inspect Chart" on any visual source card to load the page rendering or chart image here.</p>
+                            </div>
+                            <div class="visual-viewport hidden" id="visual-viewport-container">
+                                <div class="viewport-header">
+                                    <span id="viewport-label">Page Image</span>
+                                    <button class="zoom-reset-btn" id="zoom-reset">Reset View</button>
+                                </div>
+                                <div class="image-zoom-container">
+                                    <img id="inspected-image" src="" alt="Inspected Page Content">
+                                </div>
+                                <div class="viewport-caption">
+                                    <h4>Description & Summary:</h4>
+                                    <p id="viewport-description"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tab 3: Page Browser -->
+                        <div id="page-browser" class="tab-content">
+                            <div class="empty-inspector-state" id="page-browser-empty-state">
+                                <div class="inspector-icon source-icon"></div>
+                                <p>Select a document from the sidebar to browse its pages.</p>
+                            </div>
+                            <div class="page-grid hidden" id="page-grid-container">
+                                <!-- Page items will be loaded dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast hidden"></div>
+    <script src="/static/app.js"></script>
+</body>
+</html>
